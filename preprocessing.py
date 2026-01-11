@@ -6,6 +6,8 @@ import pandas as pd
 # PARAMETRI GLOBALI
 # ============================================================
 DATASET_PATH = "data"
+PREDICT_DATASET_PATH = "PredictData"
+
 WINDOW_SIZE = 256
 STRIDE = 256
 RANDOM_SEED = 42
@@ -110,3 +112,34 @@ if __name__ == "__main__":
 
     print("\nPreprocessing complete.")
     print("Saved X.npy and y.npy")
+
+    # =========================================================
+    # INCARCARE DATE PENTRU PREDICTIE
+    # =========================================================
+    print("\nLoading prediction dataset...")
+    X_pred, y_pred = load_dataset(PREDICT_DATASET_PATH)
+
+    print("\nPrediction shapes (before normalization):")
+    print("X_pred:", X_pred.shape)
+    print("y_pred:", y_pred.shape)
+
+    # --------------------------------------------------------
+    # NORMALIZARE (ACEIASI mean & std ca la train)
+    # --------------------------------------------------------
+    X_pred = (X_pred - mean) / std
+
+    # --------------------------------------------------------
+    # ADAPTARE PENTRU CNN
+    # --------------------------------------------------------
+    X_pred = X_pred[..., np.newaxis]
+
+    print("\nFinal shape for prediction:")
+    print("X_pred:", X_pred.shape)
+
+    # --------------------------------------------------------
+    # SALVARE
+    # --------------------------------------------------------
+    np.save("X_predict.npy", X_pred)
+    np.save("y_predict.npy", y_pred)
+
+    print("\nSaved X_predict.npy and y_predict.npy")

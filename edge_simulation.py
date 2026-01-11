@@ -8,8 +8,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 # SETARI
 # ============================================================
 TFLITE_MODEL_PATH = "cnn_int8.tflite"
-X_PATH = "X.npy"
-Y_PATH = "y.npy"
+X_PATH = "X_predict.npy"
+Y_PATH = "y_predict.npy"
 
 # pentru măsurat latența realist (batch=1)
 WARMUP_RUNS = 30
@@ -68,7 +68,9 @@ for _ in range(WARMUP_RUNS):
 # MASURARE LATENTA (batch=1)
 # ============================================================
 times = []
-for i in range(MEASURE_RUNS):
+runs = min(MEASURE_RUNS, len(X))
+
+for i in range(runs):
     x = X[i:i+1].astype(np.float32)
     x_q = to_int8(x)
 
@@ -78,7 +80,7 @@ for i in range(MEASURE_RUNS):
     _ = interpreter.get_tensor(output_details[0]["index"])
     t1 = time.perf_counter()
 
-    times.append((t1 - t0) * 1000.0)  # ms
+    times.append((t1 - t0) * 1000.0)
 
 print("\nLatency (ms) batch=1:")
 print("  mean:", np.mean(times))
