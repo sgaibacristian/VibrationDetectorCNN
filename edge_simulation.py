@@ -4,28 +4,18 @@ import tensorflow as tf
 import os
 from sklearn.metrics import classification_report, confusion_matrix
 
-# ============================================================
-# SETARI
-# ============================================================
 TFLITE_MODEL_PATH = "cnn_int8.tflite"
 X_PATH = "X_predict.npy"
 Y_PATH = "y_predict.npy"
 
-# pentru măsurat latența realist (batch=1)
 WARMUP_RUNS = 30
 MEASURE_RUNS = 200
 
-# ============================================================
-# INCARCA DATE
-# ============================================================
-X = np.load(X_PATH)  # float32, normalizat, shape (N,256,1)
+X = np.load(X_PATH)
 y = np.load(Y_PATH)
 
 print("Loaded X:", X.shape, "y:", y.shape)
 
-# ============================================================
-# INCARCA INTERPRETER TFLITE
-# ============================================================
 interpreter = tf.lite.Interpreter(model_path=TFLITE_MODEL_PATH)
 interpreter.allocate_tensors()
 
@@ -37,25 +27,20 @@ print("Model size (bytes):", os.path.getsize(TFLITE_MODEL_PATH))
 print("Input:", input_details)
 print("Output:", output_details)
 
-# ============================================================
-# FUNCTIE: cuantizare input float->int8 pe baza scale/zero_point
-# ============================================================
 in_scale, in_zero = input_details[0]["quantization"]
 out_scale, out_zero = output_details[0]["quantization"]
 
+
 def to_int8(x_float):
-    # x_float shape (1,256,1)
     x_q = np.round(x_float / in_scale + in_zero).astype(np.int8)
     return x_q
 
+
 def from_int8(y_int8):
-    # y_int8 shape (1,1)
     y_f = (y_int8.astype(np.float32) - out_zero) * out_scale
     return y_f
 
-# ============================================================
-# WARMUP
-# ============================================================
+
 sample = X[0:1].astype(np.float32)
 sample_q = to_int8(sample)
 
@@ -64,14 +49,11 @@ for _ in range(WARMUP_RUNS):
     interpreter.invoke()
     _ = interpreter.get_tensor(output_details[0]["index"])
 
-# ============================================================
-# MASURARE LATENTA (batch=1)
-# ============================================================
 times = []
 runs = min(MEASURE_RUNS, len(X))
 
 for i in range(runs):
-    x = X[i:i+1].astype(np.float32)
+    x = X[i:i + 1].astype(np.float32)
     x_q = to_int8(x)
 
     t0 = time.perf_counter()
@@ -88,19 +70,16 @@ print("  p50 :", np.percentile(times, 50))
 print("  p90 :", np.percentile(times, 90))
 print("  p99 :", np.percentile(times, 99))
 
-# ============================================================
-# EVALUARE PE TOT SETUL (ca verificare post-quant)
-# ============================================================
 y_prob = []
 for i in range(len(X)):
-    x = X[i:i+1].astype(np.float32)
+    x = X[i:i + 1].astype(np.float32)
     x_q = to_int8(x)
 
     interpreter.set_tensor(input_details[0]["index"], x_q)
     interpreter.invoke()
-    y_q = interpreter.get_tensor(output_details[0]["index"])  # int8
+    y_q = interpreter.get_tensor(output_details[0]["index"])
 
-    y_f = from_int8(y_q)  # float approx sigmoid output
+    y_f = from_int8(y_q)
     y_prob.append(float(y_f.ravel()[0]))
 
 y_prob = np.array(y_prob)

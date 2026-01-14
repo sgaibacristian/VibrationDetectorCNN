@@ -3,7 +3,7 @@ import joblib
 from sklearn.metrics import confusion_matrix, classification_report
 from features import featurize_dataset
 
-MODEL_PATH = "svm_linear.joblib"  # sau "svm_rbf.joblib"
+MODEL_PATH = "svm_linear.joblib"
 
 X_pred = np.load("X_predict.npy")
 y_pred = np.load("y_predict.npy")
